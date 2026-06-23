@@ -1,17 +1,72 @@
-// Mobile menu toggle
+// ===== MOBILE MENU =====
 const mobileBtn = document.getElementById('mobileMenuBtn');
-const nav = document.querySelector('nav');
+const nav = document.querySelector('nav ul');
 
-if (mobileBtn) {
+if (mobileBtn && nav) {
     mobileBtn.addEventListener('click', () => {
-        nav.classList.toggle('show');
+        nav.classList.toggle('open');
+        const icon = mobileBtn.querySelector('i');
+        icon.classList.toggle('fa-bars');
+        icon.classList.toggle('fa-times');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('header') && nav.classList.contains('open')) {
+            nav.classList.remove('open');
+            const icon = mobileBtn.querySelector('i');
+            icon.classList.add('fa-bars');
+            icon.classList.remove('fa-times');
+        }
+    });
+
+    nav.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+            nav.classList.remove('open');
+            const icon = mobileBtn.querySelector('i');
+            icon.classList.add('fa-bars');
+            icon.classList.remove('fa-times');
+        });
     });
 }
 
-// ----- GALLERY -----
-// IMPORTANT: List your image filenames from the "assets" folder here.
-// Example: const imageFiles = ["back-to-school.jpg", "excellence-awards.jpg", "youth-day.jpg"];
-// You MUST add the actual names of your image files.
+// ===== HEADER SCROLL EFFECT =====
+const header = document.querySelector('header');
+let lastScroll = 0;
+
+window.addEventListener('scroll', () => {
+    const currentScroll = window.pageYOffset;
+    if (currentScroll > 50) {
+        header.classList.add('scrolled');
+    } else {
+        header.classList.remove('scrolled');
+    }
+    lastScroll = currentScroll;
+}, { passive: true });
+
+// ===== ACTIVE NAV LINK =====
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('nav a');
+
+function updateActiveLink() {
+    let current = '';
+    sections.forEach(section => {
+        const top = section.offsetTop - 150;
+        if (window.pageYOffset >= top) {
+            current = section.getAttribute('id');
+        }
+    });
+    navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `#${current}`) {
+            link.classList.add('active');
+        }
+    });
+}
+
+window.addEventListener('scroll', updateActiveLink, { passive: true });
+window.addEventListener('load', updateActiveLink);
+
+// ===== GALLERY =====
 const imageFiles = [
     "480200923_1029959752261520_7622419727906773896_n.jpg",
     "480242973_1030656468858515_1380702156633676753_n.jpg",
@@ -25,17 +80,21 @@ const imageFiles = [
 ];
 
 const galleryGrid = document.getElementById('galleryGrid');
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightboxImg');
+const lightboxClose = document.getElementById('lightboxClose');
 
 function buildGallery() {
     if (!galleryGrid) return;
     galleryGrid.innerHTML = '';
-    imageFiles.forEach(file => {
+    imageFiles.forEach((file, index) => {
         const imgPath = `assets/${file}`;
         const div = document.createElement('div');
         div.className = 'gallery-item';
+        div.style.animationDelay = `${index * 0.05}s`;
         const img = document.createElement('img');
         img.src = imgPath;
-        img.alt = `NNF project: ${file.replace(/\.(jpg|jpeg|png|webp)$/i, '')}`;
+        img.alt = `NNF project photo ${index + 1}`;
         img.loading = 'lazy';
         div.appendChild(img);
         div.addEventListener('click', () => openLightbox(imgPath));
@@ -43,25 +102,75 @@ function buildGallery() {
     });
 }
 
-// Lightbox functionality
 function openLightbox(src) {
-    let lb = document.querySelector('.lightbox');
-    if (!lb) {
-        lb = document.createElement('div');
-        lb.className = 'lightbox';
-        const img = document.createElement('img');
-        lb.appendChild(img);
-        document.body.appendChild(lb);
-        lb.addEventListener('click', () => {
-            lb.classList.remove('active');
-        });
+    if (lightbox && lightboxImg) {
+        lightboxImg.src = src;
+        lightbox.classList.add('active');
+        document.body.style.overflow = 'hidden';
     }
-    const lbImg = lb.querySelector('img');
-    lbImg.src = src;
-    lb.classList.add('active');
 }
 
-// Call gallery builder when page loads
+function closeLightbox() {
+    if (lightbox) {
+        lightbox.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+if (lightboxClose) {
+    lightboxClose.addEventListener('click', closeLightbox);
+}
+
+if (lightbox) {
+    lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) {
+            closeLightbox();
+        }
+    });
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeLightbox();
+    }
+});
+
+// ===== COUNTER ANIMATION =====
+function animateCounters() {
+    const counters = document.querySelectorAll('.stat-number');
+    counters.forEach(counter => {
+        const target = parseInt(counter.getAttribute('data-target'));
+        const increment = Math.ceil(target / 30);
+        let current = 0;
+
+        const updateCounter = () => {
+            current += increment;
+            if (current < target) {
+                counter.textContent = current;
+                requestAnimationFrame(updateCounter);
+            } else {
+                counter.textContent = target;
+            }
+        };
+        updateCounter();
+    });
+}
+
+// ===== INTERSECTION OBSERVER FOR COUNTERS =====
+const aboutSection = document.getElementById('about');
+if (aboutSection && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                animateCounters();
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.5 });
+    observer.observe(aboutSection);
+}
+
+// ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
     buildGallery();
 });
